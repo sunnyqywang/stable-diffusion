@@ -1,0 +1,5 @@
+--base
+configs/autoencoder/autoencoder_kl_32x32x4.yaml
+-t
+--gpus
+1,
