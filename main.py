@@ -32,7 +32,7 @@ def get_parser(**parser_kwargs):
         else:
             raise argparse.ArgumentTypeError("Boolean value expected.")
 
-    parser = argparse.ArgumentParser(**parser_kwargs)
+    parser = argparse.ArgumentParser(fromfile_prefix_chars='@', **parser_kwargs)
     parser.add_argument(
         "-n",
         "--name",
@@ -166,7 +166,7 @@ class DataModuleFromConfig(pl.LightningDataModule):
         super().__init__()
         self.batch_size = batch_size
         self.dataset_configs = dict()
-        self.num_workers = num_workers if num_workers is not None else batch_size * 2
+        self.num_workers = 0 #num_workers if num_workers is not None else batch_size * 2
         self.use_worker_init_fn = use_worker_init_fn
         if train is not None:
             self.dataset_configs["train"] = train
@@ -201,7 +201,7 @@ class DataModuleFromConfig(pl.LightningDataModule):
         else:
             init_fn = None
         return DataLoader(self.datasets["train"], batch_size=self.batch_size,
-                          num_workers=self.num_workers, shuffle=False if is_iterable_dataset else True,
+                          num_workers=self.num_workers, shuffle=False, # if is_iterable_dataset else True,
                           worker_init_fn=init_fn)
 
     def _val_dataloader(self, shuffle=False):
@@ -467,7 +467,7 @@ if __name__ == "__main__":
     parser = get_parser()
     parser = Trainer.add_argparse_args(parser)
 
-    opt, unknown = parser.parse_known_args()
+    opt, unknown = parser.parse_known_args(['@launch_parameters.txt'])
     if opt.name and opt.resume:
         raise ValueError(
             "-n/--name and -r/--resume cannot be specified both."

@@ -26,18 +26,21 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 12
-    wrap: True
+    batch_size: 2
+#    wrap: True
     train:
-      target: ldm.data.imagenet.ImageNetSRTrain
+      target: ldm.data.satellite.SatelliteTrain #imagenet.ImageNetSRTrain
       params:
         size: 256
-        degradation: pil_nearest
+        image_root: /dreambig/qingyi/image_chicago/data/images/satellite/zoom15/
+        load_demo: -1
+#        degradation: pil_nearest
     validation:
-      target: ldm.data.imagenet.ImageNetSRValidation
+      target: ldm.data.satellite.SatelliteValidation #.imagenet.ImageNetSRValidation
       params:
         size: 256
-        degradation: pil_nearest
+        image_root: /dreambig/qingyi/image_chicago/data/images/satellite/zoom15/
+        load_demo: -1
 
 lightning:
   callbacks:
