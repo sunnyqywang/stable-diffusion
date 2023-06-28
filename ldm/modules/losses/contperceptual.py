@@ -108,8 +108,8 @@ class LPIPSWithDiscriminator(nn.Module):
                 d_weight = torch.tensor(0.0)
 
             disc_factor = adopt_weight(self.disc_factor, global_step, threshold=self.discriminator_iter_start)
-            loss = weighted_nll_loss + self.kl_weight * kl_loss + \
-                   d_weight * disc_factor * g_loss + \
+            loss = (1-s_weight) * (weighted_nll_loss + self.kl_weight * kl_loss + \
+                   d_weight * disc_factor * g_loss) + \
                    s_weight * s_loss
 
             log = {"{}/total_loss".format(split): loss.clone().detach().mean(), "{}/logvar".format(split): self.logvar.detach(),

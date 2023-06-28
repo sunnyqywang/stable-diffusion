@@ -1,0 +1,8 @@
+__pycache__/
+logs/
+.idea/
+*.swp
+*.ckpt
+*.zip
+*.egg-info/
+
