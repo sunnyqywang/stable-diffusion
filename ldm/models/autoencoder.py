@@ -592,17 +592,26 @@ class SupervisedAutoencoderKL(pl.LightningModule):
         down_dim = ddconfig['resolution']
         for i in range(len(ddconfig['ch_mult'])-1):
             down_dim = down_dim // 2
+        self.down_dim = down_dim
         self.sup_channels = ddconfig['sup_channels']
-        self.supervisor = nn.Sequential(
-            nn.Linear(embed_dim*down_dim*down_dim, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, 256),
-            nn.ReLU(),
-            nn.Linear(256, 64),
-            nn.ReLU(),
-            nn.Linear(64, self.sup_channels),
-            nn.Tanh()
-        )
+        if 'z_channels_reduce' in ddconfig.keys():
+            latent_dim = ddconfig['z_channels_reduce']
+            self.z_channels_reduce = ddconfig['z_channels_reduce']
+            self.enc_compress = nn.Linear(2*down_dim*down_dim*embed_dim if ddconfig['double_z'] else down_dim*down_dim*embed_dim,
+                                    2*self.z_channels_reduce if ddconfig['double_z'] else self.z_channels_reduce)
+            self.dec_expand = nn.Linear(self.z_channels_reduce, down_dim*down_dim*embed_dim)
+        else:
+            latent_dim = embed_dim*down_dim*down_dim
+            self.z_channels_reduce = None
+
+        self.supervisor = nn.Sequential()
+        temp = latent_dim
+        while temp//4 > 10:
+            self.supervisor.append(nn.Linear(temp, temp//4))
+            self.supervisor.append(nn.ReLU())
+            temp = temp // 4
+        self.supervisor.append(nn.Linear(temp, self.sup_channels))
+        self.supervisor.append(nn.Tanh())
         self.loss = instantiate_from_config(lossconfig)
         assert ddconfig["double_z"]
         self.quant_conv = torch.nn.Conv2d(2*ddconfig["z_channels"], 2*embed_dim, 1)
@@ -630,10 +639,16 @@ class SupervisedAutoencoderKL(pl.LightningModule):
     def encode(self, x):
         h = self.encoder(x)
         moments = self.quant_conv(h)
+        if self.z_channels_reduce is not None:
+            moments = moments.view(moments.shape[0], -1)
+            moments = self.enc_compress(moments)[:,:,None,None]
         posterior = DiagonalGaussianDistribution(moments)
         return posterior
 
     def decode(self, z):
+        if self.z_channels_reduce is not None:
+            z = z.view(z.shape[0], -1)
+            z = self.dec_expand(z).view(z.shape[0], self.embed_dim, self.down_dim, self.down_dim)
         z = self.post_quant_conv(z)
         dec = self.decoder(z)
         return dec
